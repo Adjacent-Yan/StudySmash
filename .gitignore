@@ -1,0 +1,3 @@
+# ignore dependency directories
+backend/venv/
+frontend/node_modules/
