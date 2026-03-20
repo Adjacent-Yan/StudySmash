@@ -1,0 +1,67 @@
+@import "tailwindcss";
+
+@theme {
+  /*--color-primary: #ace0f9;*/
+  --color-primary: #9ad9f8;
+  /*--color-secondary: #e9defa;*/
+  --color-secondary: #d4bef5;
+  /*--color-tertiary: #fbfcdb;*/
+  --color-tertiary: #f7e585;
+  --color-accent-purple: #e9defa;
+  --color-accent-yellow: #fbfcdb;
+  --color-accent-peach: #fff1eb;
+  --color-background-light: #ffffff;
+}
+
+:root {
+  font-family: Inter, sans-serif;
+}
+
+body {
+  margin: 0;
+}
+
+.hero-glow {
+  box-shadow: 0 10px 25px -5px rgba(172, 224, 249, 0.4);
+}
+
+.pastel-mesh-bg {
+  background-color: #fff1eb;
+  background-image:
+    radial-gradient(at 0% 0%, #e9defa 0px, transparent 50%),
+    radial-gradient(at 100% 0%, #fbfcdb 0px, transparent 50%),
+    radial-gradient(at 100% 100%, #ace0f9 0px, transparent 50%),
+    radial-gradient(at 0% 100%, #e9defa 0px, transparent 50%);
+}
+
+.soft-card-shadow {
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.04);
+}
+
+.mesh-gradient-bg {
+  background:
+    radial-gradient(at 0% 0%, #e9defa 0px, transparent 30%),
+    radial-gradient(at 100% 0%, #fbfcdb 0px, transparent 30%),
+    radial-gradient(at 100% 100%, #ace0f9 0px, transparent 30%),
+    radial-gradient(at 0% 100%, #e9defa 0px, transparent 30%);
+}
+
+.glass-panel {
+  background: rgba(255, 255, 255, 0.55);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+}
+
+.shadow-soft-card {
+  box-shadow: 0 12px 40px rgba(15, 23, 42, 0.08);
+}
+
+.shadow-hero-glow {
+  box-shadow: 0 10px 30px rgba(172, 224, 249, 0.45);
+}
+
+/***
+.text-glow {
+  text-shadow: 0 0 18px rgba(173, 226, 251, 0.35);
+}*/
