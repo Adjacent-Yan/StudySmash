@@ -1,16 +1,16 @@
 # StudySmash
 CS160 Software Engineering Group Project
 
-### How to run
+## How to run
 
-#### Frontend
+### Frontend
 ```
 cd frontend
 npm install
 npm run dev
 ```
 
-#### Backend
+### Backend
 ```
 cd backend
 ```
