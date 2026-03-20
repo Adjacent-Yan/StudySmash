@@ -27,3 +27,13 @@ venv\Scripts\activate
 pip install -r requirements.txt
 python app.py
 ```
+
+## Files
+### Frontend
+* `main.jsx`
+* `App.jsx`
+* `pages`
+  * `Home.jsx`
+  * `Login.jsx`
+  * `Register.jsx`
+  * `Dashboard.jsx`
