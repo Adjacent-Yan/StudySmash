@@ -1,4 +1,5 @@
 <<<<<<< HEAD
+<<<<<<< HEAD
 # ignore dependency directories
 backend/venv/
 frontend/node_modules/
@@ -28,3 +29,8 @@ dist-ssr
 *.sln
 *.sw?
 >>>>>>> bb7e40d (frontend UI)
+=======
+# ignore dependency directories
+backend/venv/
+frontend/node_modules/
+>>>>>>> origin/main
