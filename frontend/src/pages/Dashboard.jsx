@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useState, useEffect, useRef } from "react";
 import {
     LayoutDashboard,
@@ -20,6 +20,14 @@ import {
     Shield,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
+
+import {
+    clearSession,
+    fetchDashboard,
+    formatHighScore,
+    formatPoints,
+    getToken,
+} from "../api/client";
 
 const colorStyles = {
     primary: {
@@ -113,6 +121,7 @@ function StatCard({ label, value, color = "primary" }) {
     return (
         <motion.div
             whileHover={{ y: -4 }}
+            transition={{ duration: 0.10, ease: "easeOut" }}
             className={`glass-panel flex flex-col items-center justify-center rounded-lg border border-white/5 p-6 text-center transition-all group ${styles.hoverBorder}`}
         >
             <span className="mb-2 text-[10px] font-extrabold uppercase tracking-[0.1em] text-on-surface-variant">
@@ -234,8 +243,42 @@ function LeaderboardItem({ rank, name, lvl, pts, image, isUser = false }) {
 }
 
 export default function Dashboard() {
+    const navigate = useNavigate();
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const dropdownRef = useRef(null);
+    const [dash, setDash] = useState(null);
+    const [loadErr, setLoadErr] = useState(null);
+
+    useEffect(() => {
+        if (!getToken()) {
+            navigate("/login", { replace: true });
+            return;
+        }
+        let cancelled = false;
+        (async () => {
+            try {
+                const data = await fetchDashboard();
+                if (!cancelled) {
+                    setDash(data);
+                    setLoadErr(null);
+                }
+            } catch (e) {
+                if (cancelled) return;
+                const status = e && typeof e === "object" && "status" in e ? e.status : null;
+                if (status === 401) {
+                    clearSession();
+                    navigate("/login", { replace: true });
+                    return;
+                }
+                setLoadErr(
+                    e instanceof Error ? e.message : "Failed to load dashboard",
+                );
+            }
+        })();
+        return () => {
+            cancelled = true;
+        };
+    }, [navigate]);
 
     useEffect(() => {
         const handleClickOutside = (event) => {
@@ -250,6 +293,39 @@ export default function Dashboard() {
             document.removeEventListener("mousedown", handleClickOutside);
         };
     }, []);
+
+    const user = dash?.user;
+    const accuracyStr =
+        user && typeof user.accuracy_pct === "number"
+            ? `${user.accuracy_pct.toFixed(1)}%`
+            : "—";
+
+    if (loadErr && !dash) {
+        return (
+            <div className="mesh-gradient-bg flex min-h-screen flex-col items-center justify-center gap-4 px-6 selection:bg-primary/30">
+                <p className="text-center text-on-surface">{loadErr}</p>
+                <Link
+                    to="/login"
+                    className="font-bold text-primary underline-offset-4 hover:underline"
+                >
+                    Back to login
+                </Link>
+            </div>
+        );
+    }
+
+    if (!dash || !user) {
+        return (
+            <div className="mesh-gradient-bg flex min-h-screen items-center justify-center selection:bg-primary/30">
+                <p className="text-sm font-medium tracking-widest text-on-surface-variant uppercase">
+                    Loading your dashboard…
+                </p>
+            </div>
+        );
+    }
+
+    const quizzes = dash.quizzes ?? [];
+    const leaderboard = dash.leaderboard ?? [];
 
     return (
         <div className="mesh-gradient-bg min-h-screen pb-20 selection:bg-primary/30 md:pb-0">
@@ -296,7 +372,7 @@ export default function Dashboard() {
                                 }`}
                         >
                             <img
-                                src="https://picsum.photos/seed/avatar/100/100"
+                                src={user.avatar_url}
                                 alt="User profile"
                                 className="h-full w-full object-cover"
                                 referrerPolicy="no-referrer"
@@ -314,10 +390,10 @@ export default function Dashboard() {
                                 >
                                     <div className="mb-1 border-b border-white/5 px-4 py-2">
                                         <p className="text-xs font-black uppercase tracking-widest text-primary">
-                                            NeonStriker_42
+                                            {user.username}
                                         </p>
                                         <p className="text-[10px] text-on-surface-variant">
-                                            Pro Tier Explorer
+                                            {user.tier}
                                         </p>
                                     </div>
 
@@ -341,15 +417,11 @@ export default function Dashboard() {
 
                                     <Link
                                         to="/"
+                                        onClick={() => clearSession()}
                                         className="flex items-center gap-3 px-4 py-2 text-sm text-red-400 transition-colors hover:bg-surface-low"
                                     >
                                         <LogOut size={16} />
-
-                                        <Link
-                                            to="/"
-                                            className="font-medium">
-                                            Log out
-                                        </Link>
+                                        <span className="font-medium">Log out</span>
                                     </Link>
                                 </motion.div>
                             )}
@@ -366,10 +438,10 @@ export default function Dashboard() {
                         </div>
                         <div>
                             <div className="text-[10px] font-extrabold uppercase tracking-[0.05em] text-primary">
-                                Pro Tier
+                                {user.tier}
                             </div>
                             <div className="text-xs font-medium text-on-surface-variant">
-                                LVL 42 Explorer
+                                LVL {user.level}
                             </div>
                         </div>
                     </div>
@@ -402,6 +474,7 @@ export default function Dashboard() {
 
                         <Link
                             to="/"
+                            onClick={() => clearSession()}
                             className="flex items-center gap-3 px-4 py-2 text-on-surface-variant transition-all hover:text-red-400"
                         >
                             <LogOut size={16} />
@@ -426,56 +499,75 @@ export default function Dashboard() {
                             >
                                 Welcome back,
                                 <br />
-                                <span className="text-glow text-primary">NeonStriker_42</span>
+                                <span className="text-glow text-primary">{user.username}</span>
                             </motion.h1>
 
                             <p className="max-w-xl text-lg text-on-surface-variant">
                                 Your study streak is currently{" "}
-                                <span className="font-bold text-tertiary">12 days</span>. Keep the
+                                <span className="font-bold text-tertiary">
+                                    {user.streak_days} days
+                                </span>
+                                . Keep the
                                 flame alive and smash today's daily challenge!
                             </p>
                         </section>
 
                         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                            <StatCard label="Games Played" value="1,248" color="primary" />
-                            <StatCard label="High Score" value="98.4k" color="secondary" />
-                            <StatCard label="Accuracy" value="94.2%" color="tertiary" />
+                            <StatCard
+                                label="Games Played"
+                                value={formatPoints(user.games_played)}
+                                color="primary"
+                            />
+                            <StatCard
+                                label="High Score"
+                                value={formatHighScore(user.high_score)}
+                                color="secondary"
+                            />
+                            <StatCard label="Accuracy" value={accuracyStr} color="tertiary" />
                         </div>
 
                         <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                             <motion.button
                                 whileHover={{ y: -4 }}
+                                transition={{ duration: 0.1, ease: "easeOut" }}
                                 className="group relative h-48 overflow-hidden rounded-xl shadow-[0_15px_40px_rgba(173,226,251,0.2)] transition-all hover:shadow-[0_20px_60px_rgba(173,226,251,0.3)]"
                             >
                                 <div className="absolute inset-0 bg-primary opacity-90 transition-opacity group-hover:opacity-100"></div>
                                 <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent"></div>
 
-                                <div className="relative flex h-full flex-col items-center justify-center p-8 text-surface">
-                                    <PlayCircle size={48} className="mb-3 fill-current" />
-                                    <span className="text-3xl font-black tracking-tighter">
-                                        PLAY QUIZ
-                                    </span>
-                                    <span className="mt-1 text-sm font-bold opacity-70">
-                                        Jump into the action
-                                    </span>
-                                </div>
+                                <Link
+                                    to="/gameplay">
+                                    <div className="relative flex h-full flex-col items-center justify-center p-8 text-surface">
+                                        <PlayCircle size={48} className="mb-3 fill-current transition-transform duration-150 ease-out group-hover:scale-105" />
+                                        <span className="text-3xl font-black tracking-tighter transition-transform duration-150 ease-out group-hover:scale-105">
+                                            PLAY QUIZ
+                                        </span>
+                                        <span className="mt-1 text-sm font-bold opacity-70 transition-transform duration-150 ease-out group-hover:scale-105">
+                                            Jump into the action
+                                        </span>
+                                    </div>
+                                </Link>
                             </motion.button>
 
                             <motion.button
                                 whileHover={{ y: -4 }}
+                                transition={{ duration: 0.1, ease: "easeOut" }}
                                 className="glass-panel group relative h-48 overflow-hidden rounded-xl border-2 border-primary/30 transition-all hover:border-primary/60"
                             >
                                 <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent"></div>
 
-                                <div className="relative flex h-full flex-col items-center justify-center p-8">
-                                    <PlusCircle size={48} className="mb-3 text-primary" />
-                                    <span className="text-3xl font-black tracking-tighter text-primary">
-                                        CREATE QUIZ
-                                    </span>
-                                    <span className="mt-1 text-sm font-bold text-on-surface-variant">
-                                        Build your own universe
-                                    </span>
-                                </div>
+                                <Link
+                                    to="#">
+                                    <div className="relative flex h-full flex-col items-center justify-center p-8">
+                                        <PlusCircle size={48} className="mb-3 text-primary transition-transform duration-150 ease-out group-hover:scale-105" />
+                                        <span className="text-3xl font-black tracking-tighter text-primary transition-transform duration-150 ease-out group-hover:scale-105">
+                                            CREATE QUIZ
+                                        </span>
+                                        <span className="mt-1 text-sm font-bold text-on-surface-variant transition-transform duration-150 ease-out group-hover:scale-105">
+                                            Build your own universe
+                                        </span>
+                                    </div>
+                                </Link>
                             </motion.button>
                         </div>
 
@@ -494,38 +586,17 @@ export default function Dashboard() {
                             </div>
 
                             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-                                <QuizCard
-                                    category="Science"
-                                    title="Astrophysics 101"
-                                    time="15m"
-                                    rating="4.9"
-                                    color="primary"
-                                    image="https://picsum.photos/seed/space/200/200"
-                                />
-                                <QuizCard
-                                    category="History"
-                                    title="Cyber Medieval Era"
-                                    time="10m"
-                                    rating="4.7"
-                                    color="secondary"
-                                    image="https://picsum.photos/seed/castle/200/200"
-                                />
-                                <QuizCard
-                                    category="Tech"
-                                    title="Neural Networks"
-                                    time="20m"
-                                    rating="5.0"
-                                    color="tertiary"
-                                    image="https://picsum.photos/seed/code/200/200"
-                                />
-                                <QuizCard
-                                    category="Math"
-                                    title="Quantum Algebra"
-                                    time="12m"
-                                    rating="4.5"
-                                    color="red"
-                                    image="https://picsum.photos/seed/math/200/200"
-                                />
+                                {quizzes.map((q) => (
+                                    <QuizCard
+                                        key={q.id}
+                                        category={q.category}
+                                        title={q.title}
+                                        time={q.time}
+                                        rating={q.rating}
+                                        color={q.color}
+                                        image={q.image}
+                                    />
+                                ))}
                             </div>
                         </div>
                     </div>
@@ -538,35 +609,17 @@ export default function Dashboard() {
                             </div>
 
                             <div className="space-y-4 p-6">
-                                <LeaderboardItem
-                                    rank={1}
-                                    name="VoidMaster"
-                                    lvl={99}
-                                    pts="128,400"
-                                    image="https://picsum.photos/seed/p1/100/100"
-                                />
-                                <LeaderboardItem
-                                    rank={7}
-                                    name="NeonStriker_42"
-                                    lvl={42}
-                                    pts="94,200"
-                                    image="https://picsum.photos/seed/avatar/100/100"
-                                    isUser
-                                />
-                                <LeaderboardItem
-                                    rank={8}
-                                    name="Astra_Zero"
-                                    lvl={39}
-                                    pts="91,050"
-                                    image="https://picsum.photos/seed/p3/100/100"
-                                />
-                                <LeaderboardItem
-                                    rank={9}
-                                    name="PixelDrifter"
-                                    lvl={35}
-                                    pts="88,200"
-                                    image="https://picsum.photos/seed/p4/100/100"
-                                />
+                                {leaderboard.map((row) => (
+                                    <LeaderboardItem
+                                        key={`${row.rank}-${row.name}`}
+                                        rank={row.rank}
+                                        name={row.name}
+                                        lvl={row.lvl}
+                                        pts={formatPoints(row.pts)}
+                                        image={row.image}
+                                        isUser={row.is_user}
+                                    />
+                                ))}
                             </div>
 
                             <button className="w-full border-t border-white/10 p-4 text-xs font-black uppercase tracking-widest text-on-surface-variant transition-colors hover:text-primary">

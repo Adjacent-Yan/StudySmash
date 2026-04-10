@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion } from "motion/react";
 import {
@@ -5,16 +6,19 @@ import {
     Lock,
     Rocket,
     ArrowRight,
-    Chrome,
-    Github,
 } from "lucide-react";
 
 import AuthNavbar from "../components/AuthNavbar";
 import AuthFooter from "../components/AuthFooter";
 import InputField from "../components/InputField";
+import { loginRequest, setStoredUser, setToken } from "../api/client";
 
 export default function Login() {
     const navigate = useNavigate();
+    const [email, setEmail] = useState("");
+    const [password, setPassword] = useState("");
+    const [error, setError] = useState("");
+    const [loading, setLoading] = useState(false);
 
     return (
         <div className="mesh-gradient-bg flex min-h-screen flex-col selection:bg-primary/30">
@@ -44,22 +48,61 @@ export default function Login() {
                             </p>
                         </div>
 
-                        <form className="space-y-3" onSubmit={(e) => {
-                            e.preventDefault();
-                            navigate("/dashboard");
-                        }}>
+                        <form
+                            className="space-y-3"
+                            onSubmit={async (e) => {
+                                e.preventDefault();
+                                setError("");
+                                setLoading(true);
+                                try {
+                                    const data = await loginRequest({
+                                        email: email.trim(),
+                                        password,
+                                    });
+                                    setToken(data.token);
+                                    setStoredUser(data.user);
+                                    navigate("/dashboard");
+                                } catch (err) {
+                                    setError(
+                                        err instanceof Error
+                                            ? err.message
+                                            : "Login failed",
+                                    );
+                                } finally {
+                                    setLoading(false);
+                                }
+                            }}
+                        >
+                            {error ? (
+                                <p className="rounded-2xl bg-red-500/10 px-4 py-3 text-center text-sm font-medium text-red-600">
+                                    {error}
+                                </p>
+                            ) : null}
+
                             <InputField
                                 label="Email Address"
                                 icon={Mail}
                                 type="email"
+                                name="email"
                                 placeholder="name@example.com"
+                                value={email}
+                                onChange={(ev) => setEmail(ev.target.value)}
+                                autoComplete="email"
+                                required
+                                disabled={loading}
                             />
 
                             <InputField
                                 label="Password"
                                 icon={Lock}
                                 type="password"
+                                name="password"
                                 placeholder="••••••••••••••"
+                                value={password}
+                                onChange={(ev) => setPassword(ev.target.value)}
+                                autoComplete="current-password"
+                                required
+                                disabled={loading}
                                 rightElement={
                                     <button
                                         type="button"
@@ -84,8 +127,12 @@ export default function Login() {
                                 </label>
                             </div>
 
-                            <button className="group flex w-full items-center justify-center gap-2 rounded-2xl bg-primary py-4 font-bold text-slate-900 shadow-hero-glow transition-all duration-200 hover:scale-[0.98] active:scale-95">
-                                Log In
+                            <button
+                                type="submit"
+                                disabled={loading}
+                                className="group flex w-full items-center justify-center gap-2 rounded-2xl bg-primary py-4 font-bold text-slate-900 shadow-hero-glow transition-all duration-200 hover:scale-[0.98] active:scale-95 disabled:opacity-60"
+                            >
+                                {loading ? "Signing in…" : "Log In"}
                                 <ArrowRight
                                     size={20}
                                     className="transition-transform group-hover:translate-x-1"
