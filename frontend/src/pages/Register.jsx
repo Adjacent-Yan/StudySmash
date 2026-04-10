@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion } from "motion/react";
 import {
@@ -5,17 +6,20 @@ import {
     Mail,
     Lock,
     ArrowRight,
-    Crown,
-    Chrome,
-    Gamepad2,
 } from "lucide-react";
 
 import AuthNavbar from "../components/AuthNavbar";
 import AuthFooter from "../components/AuthFooter";
 import InputField from "../components/InputField";
+import { registerRequest, setStoredUser, setToken } from "../api/client";
 
 export default function Register() {
     const navigate = useNavigate();
+    const [username, setUsername] = useState("");
+    const [email, setEmail] = useState("");
+    const [password, setPassword] = useState("");
+    const [error, setError] = useState("");
+    const [loading, setLoading] = useState(false);
     return (
         <div className="mesh-gradient-bg flex min-h-screen flex-col selection:bg-primary/30">
             <AuthNavbar mode="full" />
@@ -39,32 +43,82 @@ export default function Register() {
                             </p>
                         </div>
 
-                        <form className="space-y-6" onSubmit={(e) => {
-                            e.preventDefault();
-                            navigate("/dashboard");
-                        }}>
+                        <form
+                            className="space-y-6"
+                            onSubmit={async (e) => {
+                                e.preventDefault();
+                                setError("");
+                                setLoading(true);
+                                try {
+                                    const data = await registerRequest({
+                                        username: username.trim(),
+                                        email: email.trim(),
+                                        password,
+                                    });
+                                    setToken(data.token);
+                                    setStoredUser(data.user);
+                                    navigate("/dashboard");
+                                } catch (err) {
+                                    setError(
+                                        err instanceof Error
+                                            ? err.message
+                                            : "Could not create account",
+                                    );
+                                } finally {
+                                    setLoading(false);
+                                }
+                            }}
+                        >
+                            {error ? (
+                                <p className="rounded-2xl bg-red-500/10 px-4 py-3 text-center text-sm font-medium text-red-600">
+                                    {error}
+                                </p>
+                            ) : null}
+
                             <InputField
                                 label="Username"
                                 icon={User}
+                                name="username"
                                 placeholder="username"
+                                value={username}
+                                onChange={(ev) => setUsername(ev.target.value)}
+                                autoComplete="username"
+                                required
+                                disabled={loading}
                             />
 
                             <InputField
                                 label="Email Address"
                                 icon={Mail}
                                 type="email"
+                                name="email"
                                 placeholder="name@example.com"
+                                value={email}
+                                onChange={(ev) => setEmail(ev.target.value)}
+                                autoComplete="email"
+                                required
+                                disabled={loading}
                             />
 
                             <InputField
                                 label="Password"
                                 icon={Lock}
                                 type="password"
+                                name="password"
                                 placeholder="••••••••••••••"
+                                value={password}
+                                onChange={(ev) => setPassword(ev.target.value)}
+                                autoComplete="new-password"
+                                required
+                                disabled={loading}
                             />
 
-                            <button className="group flex w-full items-center justify-center gap-2 rounded-2xl bg-primary py-4 font-bold text-slate-900 shadow-hero-glow transition-all duration-200 hover:scale-[0.98] active:scale-95">
-                                Sign Up
+                            <button
+                                type="submit"
+                                disabled={loading}
+                                className="group flex w-full items-center justify-center gap-2 rounded-2xl bg-primary py-4 font-bold text-slate-900 shadow-hero-glow transition-all duration-200 hover:scale-[0.98] active:scale-95 disabled:opacity-60"
+                            >
+                                {loading ? "Creating account…" : "Sign Up"}
                                 <ArrowRight
                                     size={20}
                                     className="transition-transform group-hover:translate-x-1"
