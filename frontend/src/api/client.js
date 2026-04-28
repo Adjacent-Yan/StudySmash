@@ -1,4 +1,4 @@
-const API_BASE = import.meta.env.VITE_API_URL ?? "";
+const API_BASE = import.meta.env.VITE_API_URL ?? "http://localhost:5050";
 
 function parseError(res, body) {
     const msg =
@@ -70,26 +70,27 @@ export async function api(path, options = {}) {
     return data;
 }
 
-export function loginRequest(payload) {
-    return api("/api/auth/login", { method: "POST", body: payload });
-}
-
-export function registerRequest(payload) {
-    return api("/api/auth/register", { method: "POST", body: payload });
-}
-
-export function fetchDashboard() {
-    return api("/api/dashboard", { method: "GET" });
-}
+export const loginRequest = (payload) => api("/api/auth/login", { method: "POST", body: payload });
+export const registerRequest = (payload) => api("/api/auth/register", { method: "POST", body: payload });
+export const fetchMe = () => api("/api/me");
+export const fetchDashboard = () => api("/api/dashboard");
+export const fetchQuizzes = () => api("/api/quizzes");
+export const fetchQuiz = (quizId) => api(`/api/quizzes/${quizId}`);
+export const createQuiz = (payload) => api("/api/quizzes", { method: "POST", body: payload });
+export const startGameSession = (payload) => api("/api/game-sessions", { method: "POST", body: payload });
+export const submitGameAnswer = (sessionId, payload) => api(`/api/game-sessions/${sessionId}/answers`, { method: "POST", body: payload });
+export const finishGameSession = (sessionId, payload) => api(`/api/game-sessions/${sessionId}/finish`, { method: "POST", body: payload });
+export const fetchLeaderboard = (period = "overall") => api(`/api/leaderboard?period=${period}`);
+export const fetchProgress = () => api("/api/my-progress");
 
 export function formatPoints(n) {
-    if (typeof n !== "number" || Number.isNaN(n)) return "0";
-    return n.toLocaleString();
+  if (typeof n !== "number" || Number.isNaN(n)) return "0";
+  return n.toLocaleString();
 }
 
 export function formatHighScore(n) {
-    if (typeof n !== "number" || Number.isNaN(n)) return "0";
-    if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
-    if (n >= 1000) return `${(n / 1000).toFixed(1)}k`;
-    return String(n);
+  if (typeof n !== "number" || Number.isNaN(n)) return "0";
+  if (n >= 1000000) return `${(n / 1000000).toFixed(1)}M`;
+  if (n >= 1000) return `${(n / 1000).toFixed(1)}k`;
+  return String(n);
 }

@@ -1,160 +1,54 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { motion } from "motion/react";
-import {
-    Mail,
-    Lock,
-    Rocket,
-    ArrowRight,
-} from "lucide-react";
-
-import AuthNavbar from "../components/AuthNavbar";
-import AuthFooter from "../components/AuthFooter";
-import InputField from "../components/InputField";
 import { loginRequest, setStoredUser, setToken } from "../api/client";
+import InputField from "../components/InputField";
+import AuthFooter from "../components/AuthFooter";
+import AuthNavbar from "../components/AuthNavbar";
+import { Lock, Mail } from "lucide-react";
 
 export default function Login() {
-    const navigate = useNavigate();
-    const [email, setEmail] = useState("");
-    const [password, setPassword] = useState("");
-    const [error, setError] = useState("");
-    const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-    return (
-        <div className="mesh-gradient-bg flex min-h-screen flex-col selection:bg-primary/30">
-            <AuthNavbar mode="simple" />
-
-            <main className="relative flex flex-grow items-center justify-center overflow-hidden px-4">
-                <div className="absolute top-1/4 -left-20 h-64 w-64 rounded-full bg-secondary/30 blur-3xl" />
-                <div className="absolute right-20 bottom-1/4 h-80 w-80 rounded-full bg-primary/20 blur-3xl" />
-
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="z-10 w-full max-w-md"
-                >
-                    <div className="glass-panel rounded-3xl p-4 shadow-soft-card md:p-12 mb-8">
-
-                        <div className="mb-10 text-center">
-                            <div className="mb-6 inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-secondary/40">
-                                <Rocket className="text-slate-700" size={32} />
-                            </div>
-
-                            <h1 className="mb-2 text-4xl font-black tracking-tight text-slate-900">
-                                Welcome Back
-                            </h1>
-                            <p className="text-sm font-medium uppercase tracking-wide text-slate-500">
-                                Ready to smash some goals?
-                            </p>
-                        </div>
-
-                        <form
-                            className="space-y-3"
-                            onSubmit={async (e) => {
-                                e.preventDefault();
-                                setError("");
-                                setLoading(true);
-                                try {
-                                    const data = await loginRequest({
-                                        email: email.trim(),
-                                        password,
-                                    });
-                                    setToken(data.token);
-                                    setStoredUser(data.user);
-                                    navigate("/dashboard");
-                                } catch (err) {
-                                    setError(
-                                        err instanceof Error
-                                            ? err.message
-                                            : "Login failed",
-                                    );
-                                } finally {
-                                    setLoading(false);
-                                }
-                            }}
-                        >
-                            {error ? (
-                                <p className="rounded-2xl bg-red-500/10 px-4 py-3 text-center text-sm font-medium text-red-600">
-                                    {error}
-                                </p>
-                            ) : null}
-
-                            <InputField
-                                label="Email Address"
-                                icon={Mail}
-                                type="email"
-                                name="email"
-                                placeholder="name@example.com"
-                                value={email}
-                                onChange={(ev) => setEmail(ev.target.value)}
-                                autoComplete="email"
-                                required
-                                disabled={loading}
-                            />
-
-                            <InputField
-                                label="Password"
-                                icon={Lock}
-                                type="password"
-                                name="password"
-                                placeholder="••••••••••••••"
-                                value={password}
-                                onChange={(ev) => setPassword(ev.target.value)}
-                                autoComplete="current-password"
-                                required
-                                disabled={loading}
-                                rightElement={
-                                    <button
-                                        type="button"
-                                        className="text-[0.75rem] font-bold uppercase tracking-widest text-primary transition-colors hover:text-blue-500"
-                                    >
-                                        Forgot Password?
-                                    </button>
-                                }
-                            />
-
-                            <div className="flex items-center gap-3 px-1 my-6">
-                                <input
-                                    type="checkbox"
-                                    id="remember"
-                                    className="h-5 w-5 cursor-pointer rounded border-slate-200 text-primary focus:ring-primary"
-                                />
-                                <label
-                                    htmlFor="remember"
-                                    className="cursor-pointer text-sm text-slate-500"
-                                >
-                                    Keep me logged in
-                                </label>
-                            </div>
-
-                            <button
-                                type="submit"
-                                disabled={loading}
-                                className="group flex w-full items-center justify-center gap-2 rounded-2xl bg-primary py-4 font-bold text-slate-900 shadow-hero-glow transition-all duration-200 hover:scale-[0.98] active:scale-95 disabled:opacity-60"
-                            >
-                                {loading ? "Signing in…" : "Log In"}
-                                <ArrowRight
-                                    size={20}
-                                    className="transition-transform group-hover:translate-x-1"
-                                />
-                            </button>
-                        </form>
-
-                        <div className="m-8 text-center">
-                            <p className="font-medium text-slate-500">
-                                Don't have an account?{" "}
-                                <Link
-                                    to="/register"
-                                    className="font-bold text-primary hover:underline">
-                                    Sign Up
-                                </Link>
-                            </p>
-                        </div>
-                    </div>
-                </motion.div>
-            </main>
-
-            <AuthFooter />
+  return (
+    <div className="mesh-gradient-bg flex min-h-screen flex-col">
+      <AuthNavbar />
+      <main className="flex flex-1 items-center justify-center px-4 py-10">
+        <div className="glass-panel w-full max-w-md rounded-3xl p-8 shadow-soft-card">
+          <h1 className="text-4xl font-black tracking-tight">Welcome back</h1>
+          <p className="mt-2 text-slate-600">Use the seeded test account or your own MySQL-backed account.</p>
+          <form
+            className="mt-8 space-y-5"
+            onSubmit={async (e) => {
+              e.preventDefault();
+              setError("");
+              setLoading(true);
+              try {
+                const data = await loginRequest({ email, password });
+                setToken(data.token);
+                setStoredUser(data.user);
+                navigate("/dashboard", { replace: true });
+              } catch (err) {
+                setError(err instanceof Error ? err.message : "Could not sign in");
+              } finally {
+                setLoading(false);
+              }
+            }}
+          >
+            {error ? <div className="rounded-2xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">{error}</div> : null}
+            <InputField label="Email" icon={Mail} type="email" value={email} onChange={(e) => setEmail(e.target.value)} required disabled={loading} />
+            <InputField label="Password" icon={Lock} type="password" value={password} onChange={(e) => setPassword(e.target.value)} required disabled={loading} />
+            <button className="w-full rounded-2xl bg-blue-500 px-6 py-4 font-bold text-white shadow-hero-glow" disabled={loading}>
+              {loading ? "Signing in..." : "Log in"}
+            </button>
+          </form>
+          <p className="mt-6 text-sm text-slate-600">Need an account? <Link to="/register" className="font-bold text-blue-600">Sign up</Link></p>
         </div>
-    );
+      </main>
+      <AuthFooter />
+    </div>
+  );
 }
