@@ -9,6 +9,7 @@ import Login from './pages/Login'
 import Register from './pages/Register'
 import Dashboard from './pages/Dashboard'
 import Gameplay from './pages/Gameplay'
+import QuizBrowse from './pages/QuizBrowse'
 
 function App() {
   return (
@@ -20,6 +21,7 @@ function App() {
           <Route path="/register" element={<Register />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/gameplay" element={<Gameplay />} />
+          <Route path="/quizbrowse" element={<QuizBrowse />} />
         </Routes>
       </div>
     </BrowserRouter>

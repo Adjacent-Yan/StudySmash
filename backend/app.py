@@ -3,6 +3,7 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 from flask import Flask, jsonify, request
+import requests
 
 load_dotenv(Path(__file__).resolve().parent / ".env")
 from flask_cors import CORS
@@ -204,12 +205,20 @@ def create_app():
                 user_rank = rr["r"] if rr else 1
                 user_payload = user_row_to_public(row, rank=user_rank)
 
-        qrows = conn.execute(
-            """
-            SELECT id, category, title, time_label AS time, rating, image_url AS image, color
-            FROM quizzes ORDER BY id
-            """
-        ).fetchall()
+        if user_id is not None:
+            qrows = conn.execute(
+                """
+                SELECT q.id, q.category, q.title, q.time_label AS time, q.rating, q.image_url AS image, q.color
+                FROM quizzes q
+                JOIN saved_quizzes sq ON q.id = sq.quiz_id
+                WHERE sq.user_id = %s
+                ORDER BY sq.created_at DESC
+                """,
+                (user_id,)
+            ).fetchall()
+        else:
+            qrows = []
+
         quizzes_list = [
             {
                 "id": r["id"],
@@ -251,6 +260,77 @@ def create_app():
                 "leaderboard": lb,
             }
         )
+
+    opentdb_sessions = {}
+
+    @app.post("/api/gameplay/generate")
+    def generate_quiz():
+        user_id = require_user_id()
+        data = request.get_json(silent=True) or {}
+        amount = data.get("amount", 10)
+        category_id = data.get("categoryId")
+        difficulty = data.get("difficulty", "easy")
+
+        token = None
+        if user_id:
+            token = opentdb_sessions.get(user_id)
+
+        # Helper to fetch OpenTDB
+        def fetch_opentdb(t):
+            url = f"https://opentdb.com/api.php?amount={amount}&difficulty={difficulty}&type=multiple&encode=base64"
+            if category_id:
+                url += f"&category={category_id}"
+            if t:
+                url += f"&token={t}"
+            return requests.get(url).json()
+
+        res = fetch_opentdb(token)
+
+        # Code 3 means Token Not Found, Code 4 means Token Empty. Both require new/reset token.
+        if res.get("response_code") in [3, 4] or not token:
+            if token and res.get("response_code") == 4:
+                # Reset
+                requests.get(f"https://opentdb.com/api_token.php?command=reset&token={token}")
+            else:
+                # Request new token
+                t_res = requests.get("https://opentdb.com/api_token.php?command=request").json()
+                token = t_res.get("token")
+                if user_id and token:
+                    opentdb_sessions[user_id] = token
+            # Refetch
+            res = fetch_opentdb(token)
+
+        return jsonify(res)
+
+    @app.post("/api/quizzes/<int:quiz_id>/toggle-save")
+    def toggle_save_quiz(quiz_id):
+        user_id = require_user_id()
+        if not user_id:
+            return jsonify({"error": "unauthorized"}), 401
+        conn = get_db()
+        q = conn.execute("SELECT id FROM quizzes WHERE id = %s", (quiz_id,)).fetchone()
+        if not q:
+            return jsonify({"error": "Quiz not found"}), 404
+            
+        existing = conn.execute(
+            "SELECT id FROM saved_quizzes WHERE user_id = %s AND quiz_id = %s", 
+            (user_id, quiz_id)
+        ).fetchone()
+        
+        if existing:
+            conn.execute(
+                "DELETE FROM saved_quizzes WHERE user_id = %s AND quiz_id = %s", 
+                (user_id, quiz_id)
+            )
+            saved = False
+        else:
+            conn.execute(
+                "INSERT INTO saved_quizzes (user_id, quiz_id) VALUES (%s, %s)", 
+                (user_id, quiz_id)
+            )
+            saved = True
+            
+        return jsonify({"saved": saved})
 
     return app
 

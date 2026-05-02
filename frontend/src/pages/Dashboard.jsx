@@ -10,14 +10,14 @@ import {
     LogOut,
     Bell,
     Settings,
-    PlayCircle,
+    Crown,
     PlusCircle,
-    Zap,
     Timer,
     Star,
     Sparkles,
     User,
     Shield,
+    Bookmark,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 
@@ -27,6 +27,7 @@ import {
     formatHighScore,
     formatPoints,
     getToken,
+    toggleSaveQuiz,
 } from "../api/client";
 
 const colorStyles = {
@@ -134,8 +135,27 @@ function StatCard({ label, value, color = "primary" }) {
     );
 }
 
-function QuizCard({ category, title, time, rating, image, color = "primary" }) {
+function QuizCard({ id, category, title, time, rating, image, color = "primary" }) {
     const styles = colorStyles[color];
+    const [isSaved, setIsSaved] = useState(true);
+    const [isSaving, setIsSaving] = useState(false);
+
+    const handleToggleSave = async (e) => {
+        e.stopPropagation();
+        setIsSaving(true);
+        try {
+            const res = await toggleSaveQuiz(id);
+            if (res.saved !== undefined) {
+                setIsSaved(res.saved);
+            }
+        } catch (err) {
+            console.error("Failed to toggle save", err);
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    if (!isSaved) return null;
 
     return (
         <motion.div
@@ -145,6 +165,17 @@ function QuizCard({ category, title, time, rating, image, color = "primary" }) {
             <div
                 className={`absolute top-0 right-0 h-32 w-32 rounded-full blur-3xl transition-all ${styles.glowBg} ${styles.glowHoverBg}`}
             ></div>
+
+            <button
+                onClick={handleToggleSave}
+                disabled={isSaving}
+                className="absolute top-4 right-4 z-20 p-2 rounded-full hover:bg-white/10 transition-colors"
+                title={isSaved ? "Remove from Saved" : "Save Quiz"}
+            >
+                <Bookmark
+                    className={`w-5 h-5 transition-colors ${isSaved ? 'fill-primary text-primary' : 'text-slate-400'}`}
+                />
+            </button>
 
             <div className="relative z-10 flex gap-4">
                 <div className="h-16 w-16 flex-shrink-0 overflow-hidden rounded-lg bg-surface-highest">
@@ -323,17 +354,16 @@ export default function Dashboard() {
             </div>
         );
     }
-
     const quizzes = dash.quizzes ?? [];
     const leaderboard = dash.leaderboard ?? [];
 
     return (
         <div className="mesh-gradient-bg min-h-screen pb-20 selection:bg-primary/30 md:pb-0">
-            <nav className="fixed top-0 left-0 z-50 flex h-16 w-full items-center justify-between border-b border-primary/15 bg-surface-low/50 px-6 backdrop-blur-xl">
+            <nav className="fixed top-0 left-0 z-50 flex h-16 w-full items-center justify-between border-b border-primary/15 bg-white/40 px-6 backdrop-blur-xl">
                 <div className="flex items-center gap-8">
                     <Link
                         to="/dashboard"
-                        className="text-2xl font-black tracking-tighter text-primary drop-shadow-[0_0_8px_rgba(173,226,251,0.4)]"
+                        className="text-2xl font-black tracking-tighter text-slate-900"
                     >
                         StudySmash
                     </Link>
@@ -342,9 +372,12 @@ export default function Dashboard() {
                         <a className="border-b-2 border-primary pb-1 text-sm font-medium tracking-wide text-primary" href="#">
                             Dashboard
                         </a>
-                        <a className="text-sm font-medium tracking-wide text-on-surface-variant transition-colors hover:text-primary" href="#">
-                            Play
-                        </a>
+                        <Link
+                            to="/quizbrowse">
+                            <a className="text-sm font-medium tracking-wide text-on-surface-variant transition-colors hover:text-primary" href="#">
+                                Play
+                            </a>
+                        </Link>
                         <a className="text-sm font-medium tracking-wide text-on-surface-variant transition-colors hover:text-primary" href="#">
                             Create Quiz
                         </a>
@@ -456,6 +489,7 @@ export default function Dashboard() {
                 </nav>
 
                 <div className="mt-auto px-6">
+                    {/*
                     <motion.button
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
@@ -463,6 +497,7 @@ export default function Dashboard() {
                     >
                         Upgrade to Plus
                     </motion.button>
+                    */}
 
                     <div className="space-y-1 border-t border-primary/10 pt-4">
                         <a className="flex items-center gap-3 px-4 py-2 text-on-surface-variant transition-all hover:text-primary" href="#">
@@ -536,9 +571,9 @@ export default function Dashboard() {
                                 <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent"></div>
 
                                 <Link
-                                    to="/gameplay">
+                                    to="/quizbrowse">
                                     <div className="relative flex h-full flex-col items-center justify-center p-8 text-surface">
-                                        <PlayCircle size={48} className="mb-3 fill-current transition-transform duration-150 ease-out group-hover:scale-105" />
+                                        <Crown size={48} className="mb-3 fill-current transition-transform duration-150 ease-out group-hover:scale-105" />
                                         <span className="text-3xl font-black tracking-tighter transition-transform duration-150 ease-out group-hover:scale-105">
                                             PLAY QUIZ
                                         </span>
@@ -574,8 +609,8 @@ export default function Dashboard() {
                         <div className="space-y-6">
                             <div className="flex items-center justify-between">
                                 <h2 className="flex items-center gap-2 text-2xl font-black tracking-tight">
-                                    <Zap size={24} className="fill-primary/20 text-primary" />
-                                    Explore Quizzes
+                                    <Bookmark size={24} className="fill-primary/20 text-primary" />
+                                    Saved Quizzes
                                 </h2>
                                 <a
                                     className="text-xs font-black uppercase tracking-[0.1em] text-primary transition-colors hover:text-on-surface"
@@ -585,19 +620,36 @@ export default function Dashboard() {
                                 </a>
                             </div>
 
-                            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-                                {quizzes.map((q) => (
-                                    <QuizCard
-                                        key={q.id}
-                                        category={q.category}
-                                        title={q.title}
-                                        time={q.time}
-                                        rating={q.rating}
-                                        color={q.color}
-                                        image={q.image}
-                                    />
-                                ))}
-                            </div>
+                            {quizzes.length > 0 ? (
+                                <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                                    {quizzes.map((q) => (
+                                        <QuizCard
+                                            key={q.id}
+                                            id={q.id}
+                                            category={q.category}
+                                            title={q.title}
+                                            time={q.time}
+                                            rating={q.rating}
+                                            color={q.color}
+                                            image={q.image}
+                                        />
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-white/20 bg-surface-low/50 py-12 text-center">
+                                    <Bookmark className="mb-4 text-on-surface-variant opacity-50" size={48} />
+                                    <h3 className="mb-2 text-xl font-bold">No Saved Quizzes Yet</h3>
+                                    <p className="mb-6 max-w-sm text-sm text-on-surface-variant">
+                                        You haven't saved any quizzes. Head over to the Quiz Browse page to find some challenges and save them here!
+                                    </p>
+                                    <Link
+                                        to="/quizbrowse"
+                                        className="rounded-full bg-primary px-6 py-2 text-sm font-bold text-surface transition-transform hover:scale-105"
+                                    >
+                                        Browse Quizzes
+                                    </Link>
+                                </div>
+                            )}
                         </div>
                     </div>
 
@@ -667,6 +719,7 @@ export default function Dashboard() {
                             </div>
                         </div>
 
+                        {/*
                         <div className="flex items-center gap-6 rounded-lg border-2 border-primary/20 bg-gradient-to-br from-surface-high to-surface p-6">
                             <div className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-full bg-primary/20">
                                 <Timer size={32} className="animate-pulse text-primary" />
@@ -683,10 +736,12 @@ export default function Dashboard() {
                                 </p>
                             </div>
                         </div>
+                        */}
                     </div>
                 </div>
             </main>
 
+            {/*}
             <nav className="fixed bottom-0 left-0 z-50 flex h-16 w-full items-center justify-around border-t border-white/10 bg-surface-low/90 px-4 backdrop-blur-xl md:hidden">
                 <a className="flex flex-col items-center gap-1 text-primary" href="#">
                     <LayoutDashboard size={20} />
@@ -695,7 +750,7 @@ export default function Dashboard() {
                     </span>
                 </a>
                 <a className="flex flex-col items-center gap-1 text-on-surface-variant" href="#">
-                    <PlayCircle size={20} />
+                    <Crown size={20} />
                     <span className="text-[9px] font-black uppercase tracking-tighter">
                         Play
                     </span>
@@ -712,7 +767,7 @@ export default function Dashboard() {
                         Ranks
                     </span>
                 </a>
-            </nav>
+            </nav>*/}
         </div>
     );
 }

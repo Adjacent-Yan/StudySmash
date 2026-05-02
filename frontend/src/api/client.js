@@ -82,6 +82,18 @@ export function fetchDashboard() {
     return api("/api/dashboard", { method: "GET" });
 }
 
+export function fetchCategories() {
+    return fetch("https://opentdb.com/api_category.php").then(res => res.json());
+}
+
+export function generateQuiz(payload) {
+    return api("/api/gameplay/generate", { method: "POST", body: payload });
+}
+
+export function toggleSaveQuiz(quizId) {
+    return api(`/api/quizzes/${quizId}/toggle-save`, { method: "POST" });
+}
+
 export function formatPoints(n) {
     if (typeof n !== "number" || Number.isNaN(n)) return "0";
     return n.toLocaleString();
