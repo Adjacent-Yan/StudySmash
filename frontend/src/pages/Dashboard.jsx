@@ -718,56 +718,9 @@ export default function Dashboard() {
                                 </div>
                             </div>
                         </div>
-
-                        {/*
-                        <div className="flex items-center gap-6 rounded-lg border-2 border-primary/20 bg-gradient-to-br from-surface-high to-surface p-6">
-                            <div className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-full bg-primary/20">
-                                <Timer size={32} className="animate-pulse text-primary" />
-                            </div>
-                            <div>
-                                <div className="mb-1 text-[10px] font-black uppercase tracking-widest text-primary">
-                                    Live Event
-                                </div>
-                                <h4 className="text-lg leading-tight font-bold">
-                                    Flash Study Frenzy
-                                </h4>
-                                <p className="mt-1 text-xs text-on-surface-variant">
-                                    2X XP for the next 2 hours!
-                                </p>
-                            </div>
-                        </div>
-                        */}
                     </div>
                 </div>
             </main>
-
-            {/*}
-            <nav className="fixed bottom-0 left-0 z-50 flex h-16 w-full items-center justify-around border-t border-white/10 bg-surface-low/90 px-4 backdrop-blur-xl md:hidden">
-                <a className="flex flex-col items-center gap-1 text-primary" href="#">
-                    <LayoutDashboard size={20} />
-                    <span className="text-[9px] font-black uppercase tracking-tighter">
-                        Home
-                    </span>
-                </a>
-                <a className="flex flex-col items-center gap-1 text-on-surface-variant" href="#">
-                    <Crown size={20} />
-                    <span className="text-[9px] font-black uppercase tracking-tighter">
-                        Play
-                    </span>
-                </a>
-                <a className="flex flex-col items-center gap-1 text-on-surface-variant" href="#">
-                    <PlusCircle size={20} />
-                    <span className="text-[9px] font-black uppercase tracking-tighter">
-                        Create
-                    </span>
-                </a>
-                <a className="flex flex-col items-center gap-1 text-on-surface-variant" href="#">
-                    <BarChart3 size={20} />
-                    <span className="text-[9px] font-black uppercase tracking-tighter">
-                        Ranks
-                    </span>
-                </a>
-            </nav>*/}
         </div>
     );
 }

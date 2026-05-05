@@ -136,6 +136,7 @@ export default function Register() {
                         </div>
                     </div>
                 </motion.div>
+
             </main>
 
             <AuthFooter />
