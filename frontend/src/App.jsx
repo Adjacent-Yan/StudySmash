@@ -10,6 +10,9 @@ import Register from './pages/Register'
 import Dashboard from './pages/Dashboard'
 import Gameplay from './pages/Gameplay'
 import QuizBrowse from './pages/QuizBrowse'
+import CreateQuizPage from './pages/CreateQuizPage'
+import LeaderboardPage from './pages/LeaderboardPage'
+
 
 function App() {
   return (
@@ -21,7 +24,10 @@ function App() {
           <Route path="/register" element={<Register />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/gameplay" element={<Gameplay />} />
+          <Route path="/gameplay/:quizId" element={<Gameplay />} />
           <Route path="/quizbrowse" element={<QuizBrowse />} />
+          <Route path="/create-quiz" element={<CreateQuizPage />} />
+          <Route path="/leaderboard" element={<LeaderboardPage />} />
         </Routes>
       </div>
     </BrowserRouter>

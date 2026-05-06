@@ -50,9 +50,6 @@ export default function QuizCard({ quiz, onStart, initiallySaved = false, layout
                     className="absolute top-4 right-4 z-10 p-2 rounded-full hover:bg-black/5 transition-colors"
                     title={isSaved ? "Remove from Saved" : "Save Quiz"}
                 >
-                    <Bookmark 
-                        className={`w-5 h-5 transition-colors ${isSaved ? 'fill-primary text-primary' : 'text-slate-400'}`} 
-                    />
                 </button>
                 <div className="flex-1 pr-8">
                     <div className="flex items-center gap-4 mb-2">

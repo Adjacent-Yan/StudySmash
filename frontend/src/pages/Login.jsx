@@ -113,20 +113,6 @@ export default function Login() {
                                 }
                             />
 
-                            <div className="flex items-center gap-3 px-1 my-6">
-                                <input
-                                    type="checkbox"
-                                    id="remember"
-                                    className="h-5 w-5 cursor-pointer rounded border-slate-200 text-primary focus:ring-primary"
-                                />
-                                <label
-                                    htmlFor="remember"
-                                    className="cursor-pointer text-sm text-slate-500"
-                                >
-                                    Keep me logged in
-                                </label>
-                            </div>
-
                             <button
                                 type="submit"
                                 disabled={loading}
