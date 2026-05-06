@@ -24,6 +24,7 @@ export default function Navbar() {
                             <NavbarLink to="/play" label="Play" />
                             <NavbarLink to="/create-quiz" label="Create Quiz" />
                             <NavbarLink to="/leaderboard" label="Leaderboard" />
+                            <NavbarLink to="/forum" label="Forum" />
                         </div>
                     </div>
 
@@ -60,6 +61,7 @@ export default function Navbar() {
                 <MobileNavLink to="/play" icon="sports_esports" label="Play" />
                 <MobileNavLink to="/create-quiz" icon="add_circle" label="Create" />
                 <MobileNavLink to="/leaderboard" icon="leaderboard" label="Rank" />
+                <MobileNavLink to="/forum" icon="forum" label="Forum" />
             </nav>
         </>
     );

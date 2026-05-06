@@ -1081,6 +1081,299 @@ def create_app():
 
         return jsonify({"progress": rows})
 
+    # ---------------- FORUM (authenticated users only) ----------------
+
+    def forum_dt(value):
+        if value is None:
+            return None
+        if hasattr(value, "isoformat"):
+            return value.isoformat(sep=" ", timespec="seconds")
+        return str(value)
+
+    def serialize_forum_comment(row):
+        return {
+            "id": row["comment_id"],
+            "post_id": row["post_id"],
+            "body": row["body"],
+            "created_at": forum_dt(row.get("created_at")),
+            "author": {
+                "id": row["user_id"],
+                "username": row["author_username"],
+                "avatar_url": row.get("author_avatar_url") or DEFAULT_AVATAR,
+            },
+        }
+
+    @app.get("/api/forum/posts")
+    def forum_list_posts():
+        user_id = get_current_user_id()
+
+        if not user_id:
+            return unauthorized()
+
+        posts = query_all(
+            get_db(),
+            """
+            SELECT
+                p.post_id,
+                p.user_id,
+                p.body,
+                p.created_at,
+                u.username AS author_username,
+                u.avatar_url AS author_avatar_url,
+                (
+                    SELECT COUNT(*)
+                    FROM forum_post_likes l
+                    WHERE l.post_id = p.post_id
+                ) AS like_count,
+                (
+                    SELECT COUNT(*)
+                    FROM forum_comments c
+                    WHERE c.post_id = p.post_id
+                ) AS comment_count,
+                EXISTS(
+                    SELECT 1
+                    FROM forum_post_likes l
+                    WHERE l.post_id = p.post_id AND l.user_id = %s
+                ) AS liked_by_me
+            FROM forum_posts p
+            JOIN users u ON u.user_id = p.user_id
+            ORDER BY p.created_at DESC
+            LIMIT 100
+            """,
+            (user_id,),
+        )
+
+        post_ids = [p["post_id"] for p in posts]
+        comments_by_post = {pid: [] for pid in post_ids}
+
+        if post_ids:
+            placeholders = ",".join(["%s"] * len(post_ids))
+            comment_rows = query_all(
+                get_db(),
+                f"""
+                SELECT
+                    c.comment_id,
+                    c.post_id,
+                    c.user_id,
+                    c.body,
+                    c.created_at,
+                    u.username AS author_username,
+                    u.avatar_url AS author_avatar_url
+                FROM forum_comments c
+                JOIN users u ON u.user_id = c.user_id
+                WHERE c.post_id IN ({placeholders})
+                ORDER BY c.created_at ASC
+                """,
+                tuple(post_ids),
+            )
+            for cr in comment_rows:
+                comments_by_post.setdefault(cr["post_id"], []).append(
+                    serialize_forum_comment(cr),
+                )
+
+        out = []
+        for p in posts:
+            out.append(
+                {
+                    "id": p["post_id"],
+                    "body": p["body"],
+                    "created_at": forum_dt(p.get("created_at")),
+                    "like_count": int(p["like_count"] or 0),
+                    "comment_count": int(p["comment_count"] or 0),
+                    "liked_by_me": bool(p["liked_by_me"]),
+                    "author": {
+                        "id": p["user_id"],
+                        "username": p["author_username"],
+                        "avatar_url": p.get("author_avatar_url") or DEFAULT_AVATAR,
+                    },
+                    "comments": comments_by_post.get(p["post_id"], []),
+                }
+            )
+
+        return jsonify({"posts": out})
+
+    @app.post("/api/forum/posts")
+    def forum_create_post():
+        user_id = get_current_user_id()
+
+        if not user_id:
+            return unauthorized()
+
+        data = request.get_json(silent=True) or {}
+        body = (data.get("body") or "").strip()
+
+        if not body:
+            return jsonify({"error": "post body is required"}), 400
+
+        if len(body) > 10000:
+            return jsonify({"error": "post is too long"}), 400
+
+        post_id = execute(
+            get_db(),
+            "INSERT INTO forum_posts (user_id, body) VALUES (%s, %s)",
+            (user_id, body),
+        )
+
+        row = query_one(
+            get_db(),
+            """
+            SELECT
+                p.post_id,
+                p.user_id,
+                p.body,
+                p.created_at,
+                u.username AS author_username,
+                u.avatar_url AS author_avatar_url
+            FROM forum_posts p
+            JOIN users u ON u.user_id = p.user_id
+            WHERE p.post_id = %s
+            """,
+            (post_id,),
+        )
+
+        payload = {
+            "id": row["post_id"],
+            "body": row["body"],
+            "created_at": forum_dt(row.get("created_at")),
+            "like_count": 0,
+            "comment_count": 0,
+            "liked_by_me": False,
+            "author": {
+                "id": row["user_id"],
+                "username": row["author_username"],
+                "avatar_url": row.get("author_avatar_url") or DEFAULT_AVATAR,
+            },
+            "comments": [],
+        }
+
+        return jsonify({"post": payload}), 201
+
+    @app.post("/api/forum/posts/<int:post_id>/like")
+    def forum_toggle_like(post_id):
+        user_id = get_current_user_id()
+
+        if not user_id:
+            return unauthorized()
+
+        post = query_one(
+            get_db(),
+            "SELECT post_id FROM forum_posts WHERE post_id = %s",
+            (post_id,),
+        )
+
+        if not post:
+            return jsonify({"error": "post not found"}), 404
+
+        conn = get_db()
+        existing = query_one(
+            conn,
+            """
+            SELECT like_id
+            FROM forum_post_likes
+            WHERE post_id = %s AND user_id = %s
+            """,
+            (post_id, user_id),
+        )
+
+        if existing:
+            execute(
+                conn,
+                """
+                DELETE FROM forum_post_likes
+                WHERE post_id = %s AND user_id = %s
+                """,
+                (post_id, user_id),
+            )
+            liked = False
+        else:
+            execute(
+                conn,
+                """
+                INSERT INTO forum_post_likes (post_id, user_id)
+                VALUES (%s, %s)
+                """,
+                (post_id, user_id),
+            )
+            liked = True
+
+        count_row = query_one(
+            conn,
+            "SELECT COUNT(*) AS c FROM forum_post_likes WHERE post_id = %s",
+            (post_id,),
+        )
+
+        return jsonify(
+            {
+                "liked": liked,
+                "like_count": int(count_row["c"] or 0),
+            }
+        )
+
+    @app.post("/api/forum/posts/<int:post_id>/comments")
+    def forum_add_comment(post_id):
+        user_id = get_current_user_id()
+
+        if not user_id:
+            return unauthorized()
+
+        post = query_one(
+            get_db(),
+            "SELECT post_id FROM forum_posts WHERE post_id = %s",
+            (post_id,),
+        )
+
+        if not post:
+            return jsonify({"error": "post not found"}), 404
+
+        data = request.get_json(silent=True) or {}
+        body = (data.get("body") or "").strip()
+
+        if not body:
+            return jsonify({"error": "comment body is required"}), 400
+
+        if len(body) > 2000:
+            return jsonify({"error": "comment is too long"}), 400
+
+        comment_id = execute(
+            get_db(),
+            """
+            INSERT INTO forum_comments (post_id, user_id, body)
+            VALUES (%s, %s, %s)
+            """,
+            (post_id, user_id, body),
+        )
+
+        row = query_one(
+            get_db(),
+            """
+            SELECT
+                c.comment_id,
+                c.post_id,
+                c.user_id,
+                c.body,
+                c.created_at,
+                u.username AS author_username,
+                u.avatar_url AS author_avatar_url
+            FROM forum_comments c
+            JOIN users u ON u.user_id = c.user_id
+            WHERE c.comment_id = %s
+            """,
+            (comment_id,),
+        )
+
+        count_row = query_one(
+            get_db(),
+            "SELECT COUNT(*) AS c FROM forum_comments WHERE post_id = %s",
+            (post_id,),
+        )
+
+        return jsonify(
+            {
+                "comment": serialize_forum_comment(row),
+                "comment_count": int(count_row["c"] or 0),
+            }
+        ), 201
+
     return app
 
 
