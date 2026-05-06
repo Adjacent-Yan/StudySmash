@@ -188,6 +188,34 @@ export function fetchProgress() {
   });
 }
 
+/* Forum (requires auth) */
+export function fetchForumPosts() {
+  return api("/api/forum/posts", {
+    method: "GET",
+  });
+}
+
+export function createForumPost(payload) {
+  return api("/api/forum/posts", {
+    method: "POST",
+    body: payload,
+  });
+}
+
+export function toggleForumPostLike(postId) {
+  return api(`/api/forum/posts/${postId}/like`, {
+    method: "POST",
+    body: {},
+  });
+}
+
+export function createForumComment(postId, payload) {
+  return api(`/api/forum/posts/${postId}/comments`, {
+    method: "POST",
+    body: payload,
+  });
+}
+
 /* Formatting helpers */
 export function formatPoints(n) {
   if (typeof n !== "number" || Number.isNaN(n)) return "0";

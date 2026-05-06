@@ -335,12 +335,110 @@ def seed_reference_data(conn):
                 )
 
 
+def seed_forum_data(conn):
+    row = query_one(conn, "SELECT COUNT(*) AS c FROM forum_posts")
+    if row and int(row["c"] or 0) > 0:
+        return
+
+    def uid(email):
+        r = query_one(conn, "SELECT user_id FROM users WHERE email = %s", (email,))
+        return r["user_id"] if r else None
+
+    id_t1 = uid("tester1@example.com")
+    id_t2 = uid("tester2@example.com")
+    id_bot1 = uid("voidmaster@bot.local")
+    id_bot2 = uid("astrazero@bot.local")
+
+    if not id_t1 or not id_t2:
+        return
+
+    raw_samples = [
+        (
+            id_t1,
+            "Just smashed a 12-question streak on Solar System Speed Run. Gravity questions get me every time.",
+        ),
+        (
+            id_bot1,
+            "Pro tip: read the question twice before the timer eats your soul. Still lost though.",
+        ),
+        (
+            id_t2,
+            "Anyone else study US History only through these quizzes? The Jefferson question was a trap.",
+        ),
+        (
+            id_bot2,
+            "Ranking #2 but my accuracy says I guess like a coin flip. Worth it.",
+        ),
+        (
+            id_t1,
+            "Feature request: dark mode for late-night cram sessions pls",
+        ),
+    ]
+    samples = [(u, b) for u, b in raw_samples if u is not None]
+
+    post_ids = []
+    for user_id, body in samples:
+        post_ids.append(
+            execute(
+                conn,
+                "INSERT INTO forum_posts (user_id, body) VALUES (%s, %s)",
+                (user_id, body),
+            )
+        )
+
+    if id_bot1 and len(post_ids) >= 2:
+        execute(
+            conn,
+            "INSERT INTO forum_post_likes (post_id, user_id) VALUES (%s, %s)",
+            (post_ids[0], id_bot1),
+        )
+        execute(
+            conn,
+            "INSERT INTO forum_post_likes (post_id, user_id) VALUES (%s, %s)",
+            (post_ids[1], id_t1),
+        )
+    if id_t2 and post_ids:
+        execute(
+            conn,
+            "INSERT INTO forum_post_likes (post_id, user_id) VALUES (%s, %s)",
+            (post_ids[0], id_t2),
+        )
+
+    if len(post_ids) >= 3:
+        execute(
+            conn,
+            """
+            INSERT INTO forum_comments (post_id, user_id, body)
+            VALUES (%s, %s, %s)
+            """,
+            (post_ids[0], id_t2, "Same! The Mars one felt unfairly easy after that."),
+        )
+        execute(
+            conn,
+            """
+            INSERT INTO forum_comments (post_id, user_id, body)
+            VALUES (%s, %s, %s)
+            """,
+            (post_ids[2], id_t1, "Jefferson always shows up. It's the law."),
+        )
+    if id_bot1 and len(post_ids) >= 4:
+        execute(
+            conn,
+            """
+            INSERT INTO forum_comments (post_id, user_id, body)
+            VALUES (%s, %s, %s)
+            """,
+            (post_ids[3], id_bot1, "Coin flip meta is undefeated."),
+        )
+
+
 def initialize_database(app):
     create_database_if_missing(app)
     conn = connect_app(app)
     try:
         execute_script(conn, SCHEMA_PATH.read_text())
         seed_reference_data(conn)
+        seed_forum_data(conn)
     finally:
         conn.close()
 
@@ -368,6 +466,7 @@ def init_app(app):
         conn = connect_app(app)
         try:
             seed_reference_data(conn)
+            seed_forum_data(conn)
         finally:
             conn.close()
         click.echo("Seed completed.")

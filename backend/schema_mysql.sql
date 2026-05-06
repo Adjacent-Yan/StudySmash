@@ -125,6 +125,38 @@ CREATE TABLE IF NOT EXISTS reports (
     CONSTRAINT fk_reports_reviewer FOREIGN KEY (reviewed_by) REFERENCES users(user_id)
 );
 
+CREATE TABLE IF NOT EXISTS forum_posts (
+    post_id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    user_id BIGINT NOT NULL,
+    body TEXT NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_forum_posts_user FOREIGN KEY (user_id) REFERENCES users(user_id)
+);
+
+CREATE TABLE IF NOT EXISTS forum_post_likes (
+    like_id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    post_id BIGINT NOT NULL,
+    user_id BIGINT NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uniq_forum_post_like (post_id, user_id),
+    CONSTRAINT fk_forum_likes_post FOREIGN KEY (post_id) REFERENCES forum_posts(post_id) ON DELETE CASCADE,
+    CONSTRAINT fk_forum_likes_user FOREIGN KEY (user_id) REFERENCES users(user_id)
+);
+
+CREATE TABLE IF NOT EXISTS forum_comments (
+    comment_id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    post_id BIGINT NOT NULL,
+    user_id BIGINT NOT NULL,
+    body VARCHAR(2000) NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_forum_comments_post FOREIGN KEY (post_id) REFERENCES forum_posts(post_id) ON DELETE CASCADE,
+    CONSTRAINT fk_forum_comments_user FOREIGN KEY (user_id) REFERENCES users(user_id)
+);
+
+CREATE INDEX idx_forum_posts_created ON forum_posts(created_at DESC);
+CREATE INDEX idx_forum_comments_post ON forum_comments(post_id, created_at);
+
 CREATE INDEX idx_users_points ON users(points DESC, user_id ASC);
 CREATE INDEX idx_sessions_user_date ON game_sessions(user_id, started_at);
 CREATE INDEX idx_sessions_quiz_date ON game_sessions(quiz_set_id, started_at);
