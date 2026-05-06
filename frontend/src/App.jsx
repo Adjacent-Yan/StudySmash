@@ -5,8 +5,9 @@ import Login from './pages/Login'
 import Register from './pages/Register'
 import Dashboard from './pages/Dashboard'
 import Gameplay from './pages/Gameplay'
-import LeaderboardPage from './pages/LeaderboardPage'
+import QuizBrowse from './pages/QuizBrowse'
 import CreateQuizPage from './pages/CreateQuizPage'
+import LeaderboardPage from './pages/LeaderboardPage'
 import ProtectedRoute from './components/ProtectedRoute'
 
 function App() {
@@ -18,6 +19,8 @@ function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+          <Route path="/quizbrowse" element={<ProtectedRoute><QuizBrowse /></ProtectedRoute>} />
+          <Route path="/gameplay" element={<ProtectedRoute><Gameplay /></ProtectedRoute>} />
           <Route path="/gameplay/:quizId" element={<ProtectedRoute><Gameplay /></ProtectedRoute>} />
           <Route path="/leaderboard" element={<ProtectedRoute><LeaderboardPage /></ProtectedRoute>} />
           <Route path="/create-quiz" element={<ProtectedRoute><CreateQuizPage /></ProtectedRoute>} />
