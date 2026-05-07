@@ -3,6 +3,8 @@ import {
   Rocket,
   CheckCircle2,
   ArrowRight,
+  Volume2,
+  VolumeX,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -38,7 +40,11 @@ function ApiQuizGameplay() {
     amount: 10,
     title: "General Knowledge Mix",
     categoryName: "General",
+    bgmType: "general",
   };
+
+  const audio = useGameAudio(config.bgmType || "general");
+  const hasStartedBgmRef = useRef(false);
 
   const [questions, setQuestions] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -153,6 +159,25 @@ function ApiQuizGameplay() {
     return () => clearTimeout(timer);
   }, [timeLeft, isLoading, error, hasAnswered, questions.length, result]);
 
+  useEffect(() => {
+    if (
+      hasStartedBgmRef.current ||
+      isLoading ||
+      error ||
+      questions.length === 0 ||
+      result
+    ) {
+      return;
+    }
+  
+    audio.startBgm(config.bgmType || "general");
+    hasStartedBgmRef.current = true;
+  
+    return () => {
+      audio.stopBgm();
+    };
+  }, [isLoading, error, questions.length, result, config.bgmType]);
+
   function handleOptionSelect(optionId) {
     if (hasAnswered) return;
 
@@ -162,7 +187,10 @@ function ApiQuizGameplay() {
     const isCorrect = options.find((o) => o.id === optionId)?.isCorrect;
 
     if (isCorrect) {
+      audio.playCorrect();
       setScore((s) => s + 100 + timeLeft * 10);
+    } else {
+      audio.playWrong();
     }
   }
 
@@ -172,6 +200,9 @@ function ApiQuizGameplay() {
       setCurrentIndex(nextIndex);
       setupQuestion(questions[nextIndex]);
     } else {
+      audio.stopBgm();
+      audio.playFinish();
+    
       setResult({
         totalScore: score,
         totalQuestions: questions.length,
@@ -218,6 +249,7 @@ function ApiQuizGameplay() {
   if (result) {
     return (
       <AppShell title={config.title} subtitle="Session complete">
+        {audio.AudioElements}
         <div className="glass-panel mx-auto max-w-3xl rounded-3xl p-8 text-center shadow-soft-card">
           <div className="text-sm font-semibold text-blue-700">
             Quiz finished
@@ -254,6 +286,7 @@ function ApiQuizGameplay() {
 
   return (
     <AppShell title={config.title} subtitle={config.categoryName}>
+      {audio.AudioElements}
       <div className="mx-auto max-w-5xl">
         <div className="mb-6 flex items-center justify-between gap-4">
           <div>
@@ -281,6 +314,17 @@ function ApiQuizGameplay() {
               {score.toLocaleString()}
             </div>
           </div>
+          <button 
+            onClick={audio.toggleMute}
+            className="rounded-2xl bg-white/80 p-3 text-slate-700 shadow-soft-card transition hover:bg-white active:scale-95"
+            title={audio.isMuted ? "Unmute music" : "Mute music"}
+          >
+            {audio.isMuted ? (
+              <VolumeX className="h-5 w-5" />
+            ) : (
+              <Volume2 className="h-5 w-5" />
+            )}
+          </button>
         </div>
 
         <motion.div
@@ -382,6 +426,8 @@ function ApiQuizGameplay() {
 
 function CustomQuizGameplay({ quizId }) {
   const navigate = useNavigate();
+  const audio = useGameAudio("general");
+  const hasStartedBgmRef = useRef(false);
 
   const [quiz, setQuiz] = useState(null);
   const [sessionId, setSessionId] = useState(null);
@@ -465,6 +511,25 @@ function CustomQuizGameplay({ quizId }) {
     return () => clearInterval(timer);
   }, [question?.id, submitted, result]);
 
+  useEffect(() => {
+    if (
+      hasStartedBgmRef.current ||
+      loading ||
+      error ||
+      !quiz ||
+      result
+    ) {
+      return;
+    }
+  
+    audio.startBgm("general");
+    hasStartedBgmRef.current = true;
+  
+    return () => {
+      audio.stopBgm();
+    };
+  }, [loading, error, quiz, result]);
+
   async function handleSubmit(choiceId = selectedChoiceId, timedOut = false) {
     if (!question || submitted || !sessionId) return;
 
@@ -481,6 +546,11 @@ function CustomQuizGameplay({ quizId }) {
 
       setFeedback({ ...resp, timedOut });
       setRunningScore((prev) => prev + (resp.points_awarded || 0));
+      if (resp.is_correct) {
+        audio.playCorrect();
+      } else {
+        audio.playWrong();
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not submit answer");
     }
@@ -502,6 +572,8 @@ function CustomQuizGameplay({ quizId }) {
         duration_ms: Date.now() - quizStartRef.current,
       });
 
+      audio.stopBgm();
+      audio.playFinish();
       setResult(finalResult);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not finish game");
@@ -539,6 +611,7 @@ function CustomQuizGameplay({ quizId }) {
   if (result) {
     return (
       <AppShell title={quiz.title} subtitle="Session complete">
+        {audio.AudioElements}
         <div className="glass-panel mx-auto max-w-3xl rounded-3xl p-8 text-center shadow-soft-card">
           <div className="text-sm font-semibold text-blue-700">
             Quiz finished
@@ -562,13 +635,6 @@ function CustomQuizGameplay({ quizId }) {
             >
               Back to dashboard
             </Link>
-
-            <button
-              onClick={() => navigate(`/gameplay/${quizId}`, { replace: true })}
-              className="rounded-2xl bg-blue-500 px-6 py-4 font-bold text-white"
-            >
-              Play again
-            </button>
           </div>
         </div>
       </AppShell>
@@ -580,6 +646,7 @@ function CustomQuizGameplay({ quizId }) {
       title={quiz.title}
       subtitle={`${quiz.subject} • ${quiz.topic || "General"}`}
     >
+      {audio.AudioElements}
       <div className="mx-auto max-w-4xl">
         <div className="mb-6 flex items-center justify-between gap-4">
           <div>
@@ -608,6 +675,18 @@ function CustomQuizGameplay({ quizId }) {
               {runningScore.toLocaleString()}
             </div>
           </div>
+
+          <button
+            onClick={audio.toggleMute}
+            className="rounded-2xl bg-white/80 p-3 text-slate-700 shadow-soft-card transition hover:bg-white active:scale-95"
+            title={audio.isMuted ? "Unmute music" : "Mute music"}
+          >
+            {audio.isMuted ? (
+              <VolumeX className="h-5 w-5" />
+            ) : (
+              <Volume2 className="h-5 w-5" />
+            )}
+          </button>
         </div>
 
         <div className="glass-panel rounded-3xl p-8 shadow-soft-card">
@@ -690,4 +769,124 @@ function ResultStat({ label, value }) {
       <div className="text-2xl font-black">{value}</div>
     </div>
   );
+}
+
+function useGameAudio(defaultBgm = "general") {
+  const action = useRef(null);
+  const entertainment = useRef(null);
+  const epic = useRef(null);
+  const focus = useRef(null);
+  const general = useRef(null);
+  const serious = useRef(null);
+
+  const correctAns = useRef(null);
+  const wrongAns = useRef(null);
+  const finish = useRef(null);
+
+  const currentBgmRef = useRef(null);
+  const currentBgmTypeRef = useRef(defaultBgm);
+  const [isMuted, setIsMuted] = useState(false);
+
+  const bgmMap = {
+    action,
+    entertainment,
+    epic,
+    focus,
+    general,
+    serious,
+  };
+
+  const playSound = (ref) => {
+    if (isMuted || !ref.current) return;
+
+    ref.current.currentTime = 0;
+    ref.current.play().catch(() => {});
+  };
+
+  const startBgm = (type = defaultBgm) => {
+    if (isMuted) return;
+
+    const selectedBgm = bgmMap[type] || general;
+    if (!selectedBgm.current) return;
+
+    currentBgmTypeRef.current = type;
+
+    if (
+      currentBgmRef.current === selectedBgm.current &&
+      !selectedBgm.current.paused
+    ) {
+      return;
+    }
+
+    if (
+      currentBgmRef.current &&
+      currentBgmRef.current !== selectedBgm.current
+    ) {
+      currentBgmRef.current.pause();
+      currentBgmRef.current.currentTime = 0;
+    }
+
+    currentBgmRef.current = selectedBgm.current;
+    currentBgmRef.current.volume = 0.25;
+    currentBgmRef.current.loop = true;
+    currentBgmRef.current.play().catch(() => {});
+  };
+
+  const stopBgm = () => {
+    if (!currentBgmRef.current) return;
+
+    currentBgmRef.current.pause();
+    currentBgmRef.current.currentTime = 0;
+    currentBgmRef.current = null;
+  };
+
+  const toggleMute = () => {
+    setIsMuted((prev) => {
+      const nextMuted = !prev;
+
+      if (nextMuted) {
+        if (currentBgmRef.current) {
+          currentBgmRef.current.pause();
+        }
+      } else {
+        const selectedBgm =
+          bgmMap[currentBgmTypeRef.current]?.current || general.current;
+
+        if (selectedBgm) {
+          currentBgmRef.current = selectedBgm;
+          currentBgmRef.current.volume = 0.25;
+          currentBgmRef.current.loop = true;
+          currentBgmRef.current.play().catch(() => {});
+        }
+      }
+
+      return nextMuted;
+    });
+  };
+
+  const AudioElements = (
+    <>
+      <audio ref={action} src="/sounds/bgMusics/action.mp3" preload="auto" />
+      <audio ref={entertainment} src="/sounds/bgMusics/entertainment.mp3" preload="auto" />
+      <audio ref={epic} src="/sounds/bgMusics/epic.mp3" preload="auto" />
+      <audio ref={focus} src="/sounds/bgMusics/focus.mp3" preload="auto" />
+      <audio ref={general} src="/sounds/bgMusics/general.mp3" preload="auto" />
+      <audio ref={serious} src="/sounds/bgMusics/serious.mp3" preload="auto" />
+
+      <audio ref={correctAns} src="/sounds/soundEffects/correct.mp3" preload="auto" />
+      <audio ref={wrongAns} src="/sounds/soundEffects/wrong.mp3" preload="auto" />
+      <audio ref={finish} src="/sounds/soundEffects/finish.mp3" preload="auto" />
+    </>
+  );
+
+  return {
+    AudioElements,
+    isMuted,
+    toggleMute,
+    startBgm,
+    stopBgm,
+    playCorrect: () => playSound(correctAns),
+    playWrong: () => playSound(wrongAns),
+    playFinish: () => playSound(finish),
+  };
 }

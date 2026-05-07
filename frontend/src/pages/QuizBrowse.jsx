@@ -93,6 +93,41 @@ function LeaderboardItem({ rank, name, lvl, pts, image, isUser = false }) {
   );
 }
 
+function getBgmTypeForCategory(categoryName = "") {
+  const name = categoryName.toLowerCase();
+
+  if (
+    name.includes("general knowledge") ||
+    name.includes("geography") ||
+    name.includes("celebrities") ||
+    name.includes("animals")
+  ) {
+    return "general";
+  }
+
+  if (name.includes("science")) {
+    return "focus";
+  }
+
+  if (name.includes("mythology")) {
+    return "epic";
+  }
+
+  if (name.includes("sports") || name.includes("vehicles")) {
+    return "action";
+  }
+
+  if (name.includes("history") || name.includes("politics")) {
+    return "serious";
+  }
+
+  if (name.includes("entertainment") || name.includes("art")) {
+    return "entertainment";
+  }
+
+  return "general";
+}
+
 export default function QuizBrowse() {
   const navigate = useNavigate();
   const [dash, setDash] = useState(null);
@@ -165,7 +200,7 @@ export default function QuizBrowse() {
 
   const handleConfirmStart = () => {
     setIsModalOpen(false);
-
+  
     navigate("/gameplay", {
       state: {
         categoryId: selectedCategory.categoryId,
@@ -173,6 +208,7 @@ export default function QuizBrowse() {
         amount: configData.amount,
         title: selectedCategory.title,
         categoryName: selectedCategory.category,
+        bgmType: getBgmTypeForCategory(selectedCategory.title),
       },
     });
   };
